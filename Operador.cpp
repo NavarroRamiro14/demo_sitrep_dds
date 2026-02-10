@@ -8,6 +8,7 @@
 #include <dds/DCPS/Marked_Default_Qos.h>
 #include <dds/DCPS/PublisherImpl.h>
 #include <dds/DCPS/SubscriberImpl.h>
+#include "SitrepDatabase.h"
 
 #include <iostream>
 #include <string>
@@ -21,7 +22,11 @@ std::string MI_NODO_ID;
 // CLASE LISTENER (Tu código con ligeros ajustes de formato)
 // ---------------------------------------------------------------------------
 class SitrepListener : public DDS::DataReaderListener {
+    SitrepDatabase* db; // Puntero a la base de datos
 public:
+    // Constructor que recibe la DB
+    SitrepListener(SitrepDatabase* _db) : db(_db) {}
+
     virtual void on_data_available(DDS::DataReader_ptr reader) {
         SitrepMsgDataReader_var reader_i = SitrepMsgDataReader::_narrow(reader);
         if (!reader_i) return;
@@ -35,6 +40,15 @@ public:
                 if (std::string(msg.sourceId.in()) == MI_NODO_ID) {
                     continue; 
                 }
+
+                db->guardarSitrep(
+                    msg.trackId, 
+                    msg.sourceId.in(), 
+                    msg.identidad.in(), 
+                    msg.latitud, 
+                    msg.longitud, 
+                    msg.infoAmpliatoria.in()
+                );
 
                 std::cout << "\n>>> [SITREP RECIBIDO DE " << msg.sourceId << "] <<<" << std::endl;
                 std::cout << "    Track ID: " << msg.trackId << " | Identidad: " << msg.identidad << std::endl;
@@ -63,6 +77,9 @@ int main(int argc, char* argv[]) {
     try {
         // 1. Inicializar el framework DDS
         DDS::DomainParticipantFactory_var dpf = TheParticipantFactoryWithArgs(argc, argv);
+
+        // 1b. INICIALIZAR LA BASE DE DATOS
+        SitrepDatabase miBaseDeDatos("artdc_tactical.db");
 
         // 2. Crear el Participante (Dominio 42, arbitrario para AR-TDC)
         DDS::DomainParticipant_var participant =
@@ -99,7 +116,7 @@ int main(int argc, char* argv[]) {
         DDS::Subscriber_var sub =
             participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, 0, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
 
-        DDS::DataReaderListener_var listener(new SitrepListener);
+        DDS::DataReaderListener_var listener(new SitrepListener(&miBaseDeDatos));
         
         // Creamos el lector y le asignamos el Listener
         DDS::DataReader_var reader =
@@ -140,6 +157,17 @@ int main(int argc, char* argv[]) {
                 std::cout << ">> Info Ampliatoria (sin espacios por ahora): ";
                 std::string info; std::cin >> info;
                 msg.infoAmpliatoria = info.c_str();
+
+                // --- NUEVO: GUARDAR EN MI PROPIA DB ANTES DE ENVIAR ---
+                // Usamos la misma instancia 'miBaseDeDatos' que creamos al principio del main
+                miBaseDeDatos.guardarSitrep(
+                    msg.trackId,
+                    MI_NODO_ID,          // Soy yo
+                    msg.identidad.in(),
+                    msg.latitud,
+                    msg.longitud,
+                    msg.infoAmpliatoria.in()
+                );
 
                 // Publicar el mensaje
                 DDS::ReturnCode_t ret = sitrep_writer->write(msg, DDS::HANDLE_NIL);

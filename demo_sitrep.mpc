@@ -1,11 +1,16 @@
 project(*): dcpsexe, dcps_rtps_udp {
   exename   = operador
   
+  // ESTA LINEA ES NUEVA: Linkear con sqlite3
+  lit_libs += sqlite3
+
   TypeSupport_Files {
     Sitrep.idl
   }
 
   Source_Files {
     Operador.cpp
+    // SitrepDatabase.h no se compila (es header-only), pero si quieres
+    // que aparezca en el makefile como dependencia, puedes ponerlo en Header_Files
   }
 }
