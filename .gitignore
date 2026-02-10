@@ -1,0 +1,19 @@
+# OpenDDS generated files from IDL
+*C.cpp
+*C.h
+*C.inl
+*S.cpp
+*S.h
+*TypeSupport*
+
+# Compilation artifacts
+*.o
+*.so
+*.lib
+*.dll
+*.exe
+operador
+Makefile
+GNUmakefile*
+.depend*
+.obj/

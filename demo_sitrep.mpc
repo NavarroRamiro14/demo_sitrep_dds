@@ -1,0 +1,11 @@
+project(*): dcpsexe, dcps_rtps_udp {
+  exename   = operador
+  
+  TypeSupport_Files {
+    Sitrep.idl
+  }
+
+  Source_Files {
+    Operador.cpp
+  }
+}

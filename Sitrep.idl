@@ -1,0 +1,12 @@
+module ArTdc {
+
+  @topic
+  struct SitrepMsg {
+    @key long trackId;      // La anotación @key va directo en el campo
+    string sourceId;
+    string identidad;
+    double latitud;
+    double longitud;
+    string infoAmpliatoria;
+  };
+};
