@@ -17,3 +17,6 @@ Makefile
 GNUmakefile*
 .depend*
 .obj/
+
+#SQLite databses
+*.db
