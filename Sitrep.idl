@@ -9,4 +9,22 @@ module ArTdc {
     double longitud;
     string infoAmpliatoria;
   };
+
+  // --- NUEVAS ESTRUCTURAS PARA SNAPSHOT ---
+
+  // 1. Mensaje de Solicitud (El nuevo dice: "¡Dénme todo!")
+  @topic
+  struct SnapshotRequest {
+    string requesterId; // Quién pide la data
+  };
+
+  // Definimos una lista (vector) de Sitreps
+  typedef sequence<SitrepMsg> SitrepList;
+  
+  // 2. Mensaje de Respuesta (El líder dice: "Toma, aquí está la base de datos")
+  @topic
+  struct SnapshotReply {
+    string targetId; // A quién va dirigido (para que otros lo ignoren si quieren)
+    SitrepList tracks;
+  };
 };
