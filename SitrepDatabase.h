@@ -4,7 +4,9 @@
 #include <sqlite3.h>
 #include <string>
 #include <iostream>
-#include <cstdio> // Para snprintf
+#include <cstdio>
+#include <vector>
+#include "SitrepTypeSupportImpl.h"
 
 class SitrepDatabase {
     sqlite3* db;
@@ -42,13 +44,8 @@ public:
         }
     }
 
-    // La magia: INSERT OR REPLACE (Upsert)
-    // Si el trackId ya existe, lo actualiza. Si no, lo crea.
     void guardarSitrep(long id, const std::string& source, const std::string& ident, 
                        double lat, double lon, const std::string& info) {
-        
-        // NOTA: En produccion usar prepared statements (?) para evitar inyeccion SQL.
-        // Para esta demo, usamos string formatting simple.
         char sql[512];
         snprintf(sql, sizeof(sql),
             "INSERT OR REPLACE INTO sitreps (trackId, sourceId, identidad, latitud, longitud, info) "
@@ -62,6 +59,28 @@ public:
         } else {
             std::cout << "   [DB] Track " << id << " persistido correctamente." << std::endl;
         }
+    }
+
+    // Retorna todos los registros actuales para enviarlos a un nodo nuevo
+    std::vector<ArTdc::SitrepMsg> obtenerSitrepsParaSnapshot() {
+        std::vector<ArTdc::SitrepMsg> lista;
+        const char* sql = "SELECT trackId, sourceId, identidad, latitud, longitud, info FROM sitreps;";
+        sqlite3_stmt* stmt;
+
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK) {
+            while (sqlite3_step(stmt) == SQLITE_ROW) {
+                ArTdc::SitrepMsg msg;
+                msg.trackId = sqlite3_column_int(stmt, 0);
+                msg.sourceId = (const char*)sqlite3_column_text(stmt, 1);
+                msg.identidad = (const char*)sqlite3_column_text(stmt, 2);
+                msg.latitud = sqlite3_column_double(stmt, 3);
+                msg.longitud = sqlite3_column_double(stmt, 4);
+                msg.infoAmpliatoria = (const char*)sqlite3_column_text(stmt, 5);
+                lista.push_back(msg);
+            }
+        }
+        sqlite3_finalize(stmt);
+        return lista;
     }
 };
 
