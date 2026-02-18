@@ -7,6 +7,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread> // Necesario para sleep
+#include <chrono> // Necesario para tiempos
 
 using namespace ArTdc;
 
@@ -46,7 +48,7 @@ public:
                 db->guardarSitrep(msg.trackId, origen, msg.identidad.in(), msg.latitud, msg.longitud, msg.infoAmpliatoria.in());
                 
                 // Restaurar el prompt visual
-                std::cout << "Comando (p: publicar, q: salir): "; std::cout.flush();
+                std::cout << "Comando (p: publicar, l: listar, q: salir): "; std::cout.flush();
             }
         }
     }
@@ -93,7 +95,7 @@ public:
                 
                 if (datosLocales.empty()) {
                      std::cout << "[SINCRO] Mi base de datos está vacía. No envío nada." << std::endl;
-                     std::cout << "Comando (p: publicar, q: salir): "; std::cout.flush();
+                     std::cout << "Comando (p: publicar, l: listar, q: salir): "; std::cout.flush();
                      return;
                 }
 
@@ -111,7 +113,7 @@ public:
                 // 4. Enviar
                 replyWriter->write(reply, DDS::HANDLE_NIL);
                 std::cout << "[SINCRO] Snapshot enviado a " << solicitante << "." << std::endl;
-                std::cout << "Comando (p: publicar, q: salir): "; std::cout.flush();
+                std::cout << "Comando (p: publicar, l: listar, q: salir): "; std::cout.flush();
             }
         }
     }
@@ -164,7 +166,7 @@ public:
                     );
                 }
                 std::cout << "[SINCRO] Sincronización completada exitosamente." << std::endl;
-                std::cout << "Comando (p: publicar, q: salir): "; std::cout.flush();
+                std::cout << "Comando (p: publicar, l: listar, q: salir): "; std::cout.flush();
             }
         }
     }
@@ -262,6 +264,11 @@ int main(int argc, char* argv[]) {
         std::cout << "Ingrese el ID de este nodo (ej: NODO_ALFA): "; 
         std::cin >> MI_NODO_ID;
 
+        // --- CORRECCIÓN: ESPERA DE DESCUBRIMIENTO ---
+        // Le damos un respiro al DDS para que encuentre a los otros peers antes de hablar
+        std::cout << "[INICIO] Esperando descubrimiento de red (2s)..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+
         // Auto-solicitud de snapshot al iniciar
         SnapshotRequest req_msg; 
         req_msg.requesterId = MI_NODO_ID.c_str();
@@ -269,9 +276,27 @@ int main(int argc, char* argv[]) {
         std::cout << "[INICIO] Solicitando snapshot de red..." << std::endl;
 
         while (true) {
-            std::cout << "\nComando (p: publicar, q: salir): ";
+            std::cout << "\nComando (p: publicar, l: listar, q: salir): ";
             char cmd; std::cin >> cmd;
             if (cmd == 'q') break;
+            
+            // NUEVO COMANDO: LISTAR
+            if (cmd == 'l') {
+                std::cout << "\n--- BASE DE DATOS LOCAL ---" << std::endl;
+                std::vector<SitrepMsg> logs = miBaseDeDatos.obtenerSitrepsParaSnapshot();
+                if(logs.empty()) {
+                    std::cout << "(Base de datos vacía)" << std::endl;
+                } else {
+                    for(const auto& s : logs) {
+                        std::cout << "Track " << s.trackId 
+                                  << " [" << s.identidad << "] de " << s.sourceId 
+                                  << " -> (" << s.latitud << ", " << s.longitud << ") " 
+                                  << s.infoAmpliatoria << std::endl;
+                    }
+                }
+                std::cout << "---------------------------" << std::endl;
+            }
+
             if (cmd == 'p') {
                 SitrepMsg msg; 
                 msg.sourceId = MI_NODO_ID.c_str();
