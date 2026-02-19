@@ -20,3 +20,7 @@ GNUmakefile*
 
 #SQLite databses
 *.db
+
+#zips
+*.zip
+
